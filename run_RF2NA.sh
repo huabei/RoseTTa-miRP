@@ -16,8 +16,8 @@ SCRIPT=`realpath -s $0`
 export PIPEDIR=`dirname $SCRIPT`
 HHDB="$PIPEDIR/pdb100_2021Mar03/pdb100_2021Mar03"
 
-CPU="8"  # number of CPUs to use
-MEM="64" # max memory (in GB)
+CPU="12"  # number of CPUs to use
+MEM="32" # max memory (in GB)
 
 WDIR=`realpath -s $1`  # working folder
 mkdir -p $WDIR/log
@@ -43,7 +43,7 @@ function proteinMSA {
     ############################################################
     # search for templates
     ############################################################
-    if [ ! -s $WDIR/$tag.hhr ]
+    if [ ! -s $WDIR/$tag.hhr ] # 如果不存在
     then
         echo "Running hhsearch"
         HH="hhsearch -b 50 -B 500 -z 50 -Z 500 -mact 0.05 -cpu $CPU -maxmem $MEM -aliw 100000 -e 100 -p 5.0 -d $HHDB"
@@ -124,6 +124,8 @@ echo "Running RoseTTAFold2NA to predict structures"
 echo " -> Running command: python $PIPEDIR/network/predict.py -inputs $argstring -prefix $WDIR/models/model -model $PIPEDIR/network/weights/RF2NA_apr23.pt -db $HHDB"
 mkdir -p $WDIR/models
 
+echo $argstring
+# 只计算MSA
 python $PIPEDIR/network/predict.py \
     -inputs $argstring \
     -prefix $WDIR/models/model \

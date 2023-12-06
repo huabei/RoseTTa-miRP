@@ -123,13 +123,14 @@ def parse_fasta(filename,  maxseq=10000, rna_alphabet=False, dna_alphabet=False)
     return msa,ins
 
 def parse_mixed_fasta(filename,  maxseq=10000):
-    msa1,msa2 = [],[]
+    msa1,msa2 = [],[] # protein, rna
 
-    fstream = open(filename,"r")
+    fstream = open(filename,"r") # 第一行为query序列
     table = str.maketrans(dict.fromkeys(string.ascii_lowercase))
 
     unpaired_r, unpaired_p = 0, 0
 
+    # 收集蛋白质序列和RNA序列
     for line in fstream:
         # skip labels
         if line[0] == '>':
@@ -143,30 +144,33 @@ def parse_mixed_fasta(filename,  maxseq=10000):
 
         # remove lowercase letters and append to MSA
         msa_i = line.translate(table)
-        msa_i = msa_i.replace('B','D') # hacky...
-
+        msa_i = msa_i.replace('B','D') # hacky... B可代表天冬氨酸（Asp、D）或天冬酰胺（Asn、N）
+        # split into two parts: protein and rna
         msas_i = msa_i.split('/')
 
-        if (len(msas_i)==1):
+        if (len(msas_i)==1): # 第一行不会为1
+            # 如果没有RNA序列，分割蛋白质序列
             msas_i = [msas_i[0][:len(msa1[0])], msas_i[0][len(msa1[0]):]]
 
         if (len(msa1)==0 or (
             len(msas_i[0])==len(msa1[0]) and len(msas_i[1])==len(msa2[0])
         )):
             # skip if we've already found half of our limit in unpaired protein seqs
-            if sum([1 for x in msas_i[1] if x != '-']) == 0:
+            # 控制没有配对RNA的蛋白质序列的数量
+            if sum([1 for x in msas_i[1] if x != '-']) == 0: # 没有碱基
                 unpaired_p += 1
                 if unpaired_p > maxseq // 2:
                     continue
 
             # skip if we've already found half of our limit in unpaired rna seqs
+            # 
             if sum([1 for x in msas_i[0] if x != '-']) == 0:
                 unpaired_r += 1
                 if unpaired_r > maxseq // 2:
                     continue
 
             msa1.append(msas_i[0])
-            msa2.append(msas_i[1])
+            msa2.append(msas_i[1]) # 大量的'-'
         else:
             print ("Len error",filename, len(msas_i[0]),len(msa1[0]),len(msas_i[1]),len(msas_i[1]))
 
@@ -174,12 +178,14 @@ def parse_mixed_fasta(filename,  maxseq=10000):
             break
 
     # convert letters into numbers
+    # 20个氨基酸，1个gap，一个mask，总共22个token
     alphabet = np.array(list("ARNDCQEGHILKMFPSTWYV-Xacgtxbdhuy"), dtype='|S1').view(np.uint8)
     msa1 = np.array([list(s) for s in msa1], dtype='|S1').view(np.uint8)
     for i in range(alphabet.shape[0]):
         msa1[msa1 == alphabet[i]] = i
     msa1[msa1>=31] = 21  # anything unknown to 'X'
 
+    # 27-31是RNA，22-26是留给DNA的四个碱基和一个未知碱基
     alphabet = np.array(list("00000000000000000000-000000ACGTN"), dtype='|S1').view(np.uint8)
     msa2 = np.array([list(s) for s in msa2], dtype='|S1').view(np.uint8)
     for i in range(alphabet.shape[0]):
@@ -189,7 +195,7 @@ def parse_mixed_fasta(filename,  maxseq=10000):
     Ls = [msa1.shape[1],msa2.shape[1]]
     msa = np.concatenate((msa1,msa2),axis=-1)
     ins = np.zeros(msa.shape, dtype=np.uint8)
-
+    # 返回msa，全零的ins，蛋白质和RNA序列的长度
     return msa,ins,Ls
 
 # parse a fasta alignment IF it exists

@@ -1,0 +1,53 @@
+digraph "RoseTTAFold2NA" {
+    rankdir=BT
+    charset="utf-8"
+    label="RoseTTAFold2NA Workflow"
+    # inputs
+    "Protein Sequence" [label="protein fasta sequence", shape=box]
+    "RNA Sequence" [label="RNA fasta sequence", shape=box]
+    "msa" [label="Protein and RNA merged MSA", shape=box]
+    "hhr/atab" [label="HHsearch hits", shape=box]
+    "db" [label="HHblits database (PDB)", shape=box]
+    "model_params" [label="RoseTTAFold2NA model parameters", shape=box]
+    "args" [label="Input Arguments", shape=box]
+    "msa" -> "hhr/atab" [label="HHsearch"]
+    "msa" -> "args" 
+    "hhr/atab" -> "args" 
+    "db" -> "hhr/atab" 
+    "db" -> "args" [label="db"]
+    "model_params" -> "args" 
+    "Protein Sequence" -> "msa" [label="HHblits"]
+    "RNA Sequence" -> "msa" [label="nhmmer"]
+    # predictor
+    // "Predictor" [label="Predictor", shape=box]
+    "RoseTTAFold2NA" [label="RoseTTAFold2NA", shape=box]
+    // "XYZConverter" [label="XYZConverter", shape=box]
+    // "args" -> "Predictor"
+    // "RoseTTAFold2NA" -> "Predictor"
+    // "XYZConverter" -> "Predictor"
+    "args" -> "RoseTTAFold2NA" [label="load model"]
+
+    # predict
+    subgraph cluster_predict {
+        label="Predictor.predict"
+        // "args.inputs" [label="args.inputs", shape=box]
+        // "args.db" [label="args.db", shape=box]
+        // "n_templ" [label="n_templ", shape=box]
+        "msa_origin" [label="msa\n (Ns, L_P+L_R)", shape=box]
+        "args" -> "msa_origin", "LS" [label="parse_mixed_fasta"]
+        "t1d" [label="t1d\n (temp_num, L, 32) one-hot", shape=box]
+        "t2d" [label="t2d\n (temp_num, L, 37(dist)+6(sin,cos)+1(mask))", shape=box]
+        "t3d" [label="t3d\n (temp_num, L, 36, 3)", shape=box]
+        "alpha" [label="alpha\n (temp_num, L, 20 * 3(sin,cos,mask))", shape=box]
+        "same_chain" [label="same_chain \n (temp_num, L, L) bool", shape=box]
+        "mask_t_2d" [label="residue mask\n (temp_num, L, L)", shape=box]
+        "LS" [label="Ls\n [L_P, L_R]", shape=box]
+        "LS" -> "t3d" [label="initial 3D coor"]
+        "LS" -> "t1d" [label="initial 1D sequence"]
+        "t3d", "mask_t_2d" -> "t2d" [label="2D rep"]
+        "t3d" -> "alpha" [label="coor to torsion"]
+        "LS" -> "mask_t_2d", "same_chain"
+        "same_chain" -> "mask_t_2d"
+        "t1d", "t2d", "t3d", "msa_origin","alpha" -> "RoseTTAFold2NA"
+    }
+}

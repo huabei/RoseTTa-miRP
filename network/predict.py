@@ -25,7 +25,7 @@ from chemical import NTOTAL, NTOTALDOFS, NAATOKENS, INIT_CRDS, INIT_NA_CRDS
 import warnings
 
 warnings.filterwarnings("ignore", category=UserWarning)
-DEBUG=True
+DEBUG=False
 
 
 def get_args():
@@ -186,6 +186,9 @@ class Predictor:
             type_i, a3m_i = fseq_i[:2]
 
             if fseq_i[0] == "PR":
+                # 读取msa，msa(N_s, L_P+L_R)，核苷酸和氨基酸都转换为数字
+                # ins_i.shape=msa.shape, all 0
+                # Ls_i [L_P, L_R]
                 msa_i, ins_i, Ls_i = parse_mixed_fasta(a3m_i)
                 Ls.extend(Ls_i)
                 has_paired = True
@@ -241,7 +244,7 @@ class Predictor:
         # pass 2, templates
         L = sum(Ls)
         # 初始化各种氨基酸和核酸的坐标（n_templ, L, 36, 3）
-        # 前三个是确定方向，分别是N-C-C，O-P-O，
+        # 36的前三个是确定方向，分别是N-C-C，O-P-O，
         # 所以这里是将每个氨基酸的骨架坐标初始化，加了随机噪音。
         xyz_t = (
             INIT_CRDS.reshape(1, 1, NTOTAL, 3).repeat(n_templ, L, 1, 1)
@@ -254,7 +257,7 @@ class Predictor:
         # 初始化每个核苷酸O-P-O的坐标
         xyz_t[:, is_NA] = INIT_NA_CRDS.reshape(1, 1, NTOTAL, 3)
 
-        # 掩码
+        # 掩码，针对每个原子的MASK
         mask_t = torch.full((n_templ, L, NTOTAL), False)
         
         # 初始化t1d
@@ -270,7 +273,7 @@ class Predictor:
             fseq_i = seq_i.split(":")
             fseq_i[0] = fseq_i[0].upper()
             # 使得预测复合体也是用模板
-            if fseq_i[0] in ["PR", "P"] and len(fseq_i) == 4:
+            if fseq_i[0] in ["P"] and len(fseq_i) == 4:
                 hhr_i, atab_i = fseq_i[2:4]
                 startres, stopres = sum(Ls[:i]), sum(Ls[: (i + 1)])
                 xyz_t_i, t1d_i, mask_t_i = read_templates(
@@ -296,14 +299,20 @@ class Predictor:
         mask_t = mask_t[:maxtmpl].unsqueeze(0)
         t1d = t1d[:maxtmpl].float().unsqueeze(0)
 
+        # 骨架的掩码
         mask_t_2d = mask_t[:, :, :, :3].all(dim=-1)  # (B, T, L)
+        # 骨架掩码二维表示
         mask_t_2d = mask_t_2d[:, :, None] * mask_t_2d[:, :, :, None]  # (B, T, L, L)
+        # 和same_chain相乘能够将不同chain中间的mask置零。
         mask_t_2d = (
             mask_t_2d.float() * same_chain.float()[:, None]
         )  # (ignore inter-chain region)
+        
         t2d = xyz_to_t2d(xyz_t, mask_t_2d)
 
         seq_tmp = t1d[..., :-1].argmax(dim=-1).reshape(-1, L)
+        # 将坐标转换为角度
+        # RNA侧链10个角确定，蛋白质侧链4个角确定，
         alpha, _, alpha_mask, _ = self.xyz_converter.get_torsions(
             xyz_t.reshape(-1, L, NTOTAL, 3),
             seq_tmp,

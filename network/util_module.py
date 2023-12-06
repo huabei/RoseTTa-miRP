@@ -460,6 +460,11 @@ class XYZConverter(nn.Module):
         return tors_mask
 
     def get_torsions(self, xyz_in, seq, mask_in=None):
+        '''
+        RNA: 10 angel
+        Protein: 4 angel
+        
+        '''
         B,L = xyz_in.shape[:2]
 
         tors_mask = self.get_tor_mask(seq, mask_in)

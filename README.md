@@ -86,7 +86,7 @@ cd example
 ```
 ### Inputs
 * The first argument to the script is the output folder
-* The remaining arguments are fasta files for individual chains in the structure.  Use the tags `P:xxx.fa` `R:xxx.fa` `D:xxx.fa` `S:xxx.fa` to specify protein, RNA, double-stranded DNA, and single-stranded DNA, respectively.  Use the tag `PR:xxx.fa` to specify paired protein/RNA.    Each chain is a separate file; 'D' will automatically generate a complementary DNA strand to the input strand.  
+* The remaining arguments are fasta files for individual chains in the structure.  Use the tags `P:xxx.fa` `R:xxx.fa` `D:xxx.fa` `S:xxx.fa` to specify protein, RNA, double-stranded DNA, and single-stranded DNA, respectively.  Use the tag `PR:xxx.fa` to specify paired protein/RNA.    Each chain is a separate file; 'D' will automatically generate a complementary DNA strand to the input strand.
 
 ### Expected outputs
 * Outputs are written to the folder provided as the first argument (`dna_pred` and `rna_pred`).

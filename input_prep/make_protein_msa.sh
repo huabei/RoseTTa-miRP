@@ -55,33 +55,37 @@ do
 done
 
 # perform iterative searches against BFD if it failes to get enough sequences
-if [ ! -s ${out_prefix}.msa0.a3m ] 
-then
-    e=1e-3
-    echo "Running HHblits against BFD with E-value cutoff $e"
-    $HHBLITS_BFD -i $prev_a3m -oa3m $tmp_dir/t000_.$e.bfd.a3m -e $e -v 0
-    hhfilter -id 90 -cov 75 -i $tmp_dir/t000_.$e.bfd.a3m -o $tmp_dir/t000_.$e.bfd.id90cov75.a3m
-    hhfilter -id 90 -cov 50 -i $tmp_dir/t000_.$e.bfd.a3m -o $tmp_dir/t000_.$e.bfd.id90cov50.a3m
-    prev_a3m="$tmp_dir/t000_.$e.bfd.id90cov50.a3m"
-    n75=`grep -c "^>" $tmp_dir/t000_.$e.bfd.id90cov75.a3m`
-    n50=`grep -c "^>" $tmp_dir/t000_.$e.bfd.id90cov50.a3m`
+# 禁止使用bfd数据库
+# if [ ! -s ${out_prefix}.msa0.a3m ] 
+# then
+#     e=1e-3
+#     echo "Running HHblits against BFD with E-value cutoff $e"
+#     $HHBLITS_BFD -i $prev_a3m -oa3m $tmp_dir/t000_.$e.bfd.a3m -e $e -v 0
+#     hhfilter -id 90 -cov 75 -i $tmp_dir/t000_.$e.bfd.a3m -o $tmp_dir/t000_.$e.bfd.id90cov75.a3m
+#     hhfilter -id 90 -cov 50 -i $tmp_dir/t000_.$e.bfd.a3m -o $tmp_dir/t000_.$e.bfd.id90cov50.a3m
+#     prev_a3m="$tmp_dir/t000_.$e.bfd.id90cov50.a3m"
+#     n75=`grep -c "^>" $tmp_dir/t000_.$e.bfd.id90cov75.a3m`
+#     n50=`grep -c "^>" $tmp_dir/t000_.$e.bfd.id90cov50.a3m`
 
-    if ((n75>2000))
-    then
-        if [ ! -s ${out_prefix}.msa0.a3m ]
-        then
-            cp $tmp_dir/t000_.$e.bfd.id90cov75.a3m ${out_prefix}.msa0.a3m
-        fi
-    elif ((n50>4000))
-    then
-        if [ ! -s ${out_prefix}.msa0.a3m ]
-        then
-            cp $tmp_dir/t000_.$e.bfd.id90cov50.a3m ${out_prefix}.msa0.a3m
-        fi
-    fi
-fi
+#     if ((n75>2000))
+#     then
+#         if [ ! -s ${out_prefix}.msa0.a3m ]
+#         then
+#             cp $tmp_dir/t000_.$e.bfd.id90cov75.a3m ${out_prefix}.msa0.a3m
+#         fi
+#     elif ((n50>4000))
+#     then
+#         if [ ! -s ${out_prefix}.msa0.a3m ]
+#         then
+#             cp $tmp_dir/t000_.$e.bfd.id90cov50.a3m ${out_prefix}.msa0.a3m
+#         fi
+#     fi
+# fi
 
+# 如果最终也没有找到足够的序列，就用最终结果
 if [ ! -s ${out_prefix}.msa0.a3m ]
 then
+    echo "no enough sequences without bfd, use the final result"
     cp $prev_a3m ${out_prefix}.msa0.a3m
 fi
+
